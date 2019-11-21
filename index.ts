@@ -1,6 +1,7 @@
 import { readdirSync, PathLike } from 'fs';
-import Octokit from "@octokit/rest";
 import fetch from 'node-fetch';
+const Octokit = require('@octokit/rest')
+  .plugin(require('@octokit/plugin-throttling'))
 
 const getDirectories = (source: PathLike) =>
   readdirSync(source, { withFileTypes: true })
@@ -8,8 +9,22 @@ const getDirectories = (source: PathLike) =>
     .map(dirent => dirent.name);
 
 const octokit = new Octokit({
-  auth: '<token>',
-  userAgent: 'quarkus contributers search'
+  auth: process.env.TOKEN,
+  userAgent: 'quarkus contributers search',
+  throttle: {
+    onRateLimit: (retryAfter, options) => {
+      console.warn(`Request quota exhausted for request ${options.method} ${options.url}`)
+
+      if (options.request.retryCount === 0) { // only retries once
+        console.log(`Retrying after ${retryAfter} seconds!`)
+        return true
+      }
+    },
+    onAbuseLimit: (retryAfter, options) => {
+      // does not retry, only logs a warning
+      console.warn(`Abuse detected for request ${options.method} ${options.url}`)
+    }
+  }
 });
 
 (async () => {
@@ -17,24 +32,24 @@ const octokit = new Octokit({
   const userNames: any = [];
   getDirectories(base).forEach(dir => {
     const simpleGit = require('simple-git')(base + '/' + dir);
-    userNames.push(new Promise<string>((resolve) => {
-      simpleGit.log({ '--reverse': null, file: 'pom.xml' },
+    userNames.push(new Promise<string[]>((resolve) => {
+      simpleGit.log({ file: '.' },
         (err: any, log: any) => {
           if (!err) {
-            resolve(log.latest.author_name);
+            resolve(log.all.map((logLine: any) => logLine.author_name));
           } else {
-            resolve('');
+            resolve([]);
           }
         });
     }));
   });
 
-  const unique = new Set(await Promise.all(userNames));
+  const unique = new Set([].concat(...(await Promise.all(userNames))));
   const users = Array.from(unique.values());
 
   users.forEach(async (user) => {
     const result = await octokit.search.users({
-      q: 'fullname:' + user
+      q: user
     });
 
     if (result.data.items[0]) {

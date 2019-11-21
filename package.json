@@ -9,6 +9,7 @@
         "watch-ts": "tsc -w"
     },
     "dependencies": {
+        "@octokit/plugin-throttling": "^2.7.0",
         "@octokit/rest": "^16.35.0",
         "keycloak-admin": "^1.13.0",
         "node-fetch": "^2.6.0",
