@@ -1,7 +1,6 @@
-=== Little script to delete all users
+### Script to see who originated a extendsion
 
-Here you go George, a script that deletes all users
-change the url to connect to and the username / password
+And see if they are redhat or not
 
 to build and run:
 
