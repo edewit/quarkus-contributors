@@ -1,4 +1,5 @@
 import { readdirSync, PathLike } from 'fs';
+import Octokit from "@octokit/rest";
 import fetch from 'node-fetch';
 
 const getDirectories = (source: PathLike) =>
@@ -6,9 +7,7 @@ const getDirectories = (source: PathLike) =>
     .filter(dirent => dirent.isDirectory())
     .map(dirent => dirent.name);
 
-const Octokit = require("@octokit/rest");
-
-const octokit = Octokit({
+const octokit = new Octokit({
   auth: '<token>',
   userAgent: 'quarkus contributers search'
 });
@@ -18,7 +17,7 @@ const octokit = Octokit({
   const userNames: any = [];
   getDirectories(base).forEach(dir => {
     const simpleGit = require('simple-git')(base + '/' + dir);
-    userNames.push(new Promise<string>((resolve, reject) => {
+    userNames.push(new Promise<string>((resolve) => {
       simpleGit.log({ '--reverse': null, file: 'pom.xml' },
         (err: any, log: any) => {
           if (!err) {
