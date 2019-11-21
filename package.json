@@ -1,0 +1,23 @@
+{
+    "name": "testing",
+    "version": "1.0.0",
+    "main": "index.js",
+    "license": "MIT",
+    "scripts": {
+        "start": "npm run build && node index.js",
+        "build": "tsc",
+        "watch-ts": "tsc -w"
+    },
+    "dependencies": {
+        "@octokit/rest": "^16.35.0",
+        "keycloak-admin": "^1.13.0",
+        "node-fetch": "^2.6.0",
+        "simple-git": "^1.126.0"
+    },
+    "devDependencies": {
+        "@types/node": "^12.12.11",
+        "@types/node-fetch": "^2.5.3",
+        "ts-node": "^8.4.1",
+        "typescript": "^3.6.3"
+    }
+}
