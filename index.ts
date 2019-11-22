@@ -35,9 +35,12 @@ const octokit = new Octokit({
       simpleGit.log({ file: '.' },
         (err: any, log: any) => {
           if (!err) {
+            let contributors = log.all.map((logLine: any) => { return {name: logLine.author_name, email: logLine.author_email}});
+            const contributorsNames = contributors.map((c: { name: any; }) => c.name);
+            contributors = contributors.filter((c: { name: any; }, i: number) => contributorsNames.indexOf(c.name) >= i);
             resolve({
               name: dir,
-              contributors: Array.from(new Set(log.all.map((logLine: any) => logLine.author_name)))
+              contributors
             });
           } else {
             resolve({});
@@ -46,30 +49,24 @@ const octokit = new Octokit({
     }));
   });
 
-  const extension = await Promise.all(userNames)
-  const users = Array.from(new Set([].concat(...extension.map((c: { name: string, contributors: string[] }) => c.contributors))));
+  const extension = await Promise.all(userNames);
+  const usersObj = [].concat(...extension.map((ext:any) => ext.contributors));
+  const contributorsNames = usersObj.map((c: { name: any; }) => c.name);
+  const users = usersObj.filter((u: any, i: number) => contributorsNames.indexOf(u.name) >= i);
 
   const userTable: any[] = [];
   for (const user of users) {
     const result = await octokit.search.users({
-      q: user
+      q: user.name
     });
 
     if (result.data.items[0]) {
-      const response = await octokit.users.getByUsername({
-        username: result.data.items[0].login
-      });
-      const page = response.data;
-      const isRedhat = page.company !== null && page.company.indexOf('Hat') != -1;
-      if (page.name !== user) console.log('!!', page.name, user, 'is this the same user?');
-      userTable.push({
-        username: user,
-        lookupName: page.name,
-        email: page.email,
-        isRedhat: isRedhat
-      })
+      await findIfRedHat(result, user, userTable);
     } else {
-      console.log('user not found', user);
+      const fallbackResult = await octokit.search.users({q: user.email});
+      if (fallbackResult.data.items[0]) {
+        await findIfRedHat(fallbackResult, user, userTable)
+      }
     }
   }
 
@@ -77,13 +74,29 @@ const octokit = new Octokit({
   // const userTable = JSON.parse(readFileSync('./contributors.json', 'utf8'))
   extension.forEach((ext: any) => {
     const users = ext.contributors;
-    users.forEach((user: string) => {
-      const lookupUser = userTable.find((u:any) => u.username === user);
+    users.forEach((user: any) => {
+      const lookupUser = userTable.find((u:any) => u.username === user.name);
       if (lookupUser) {
-        console.log(ext.name, lookupUser.lookupName || user, lookupUser.email, (lookupUser.isRedhat ? 'Red Hat' : 'external'));
+        console.log(ext.name, ',', lookupUser.lookupName || user.name, ',', lookupUser.email || user.email, ',', (lookupUser.isRedhat ? 'Red Hat' : 'external'));
       } else {
-        console.log('user not found', user);
+        console.log(ext.name, ',', user.name, ',', user.email, ',', 'unknown');
       }
     });
   });
 })();
+
+async function findIfRedHat(result: any, user: any, userTable: any[]) {
+  const response = await octokit.users.getByUsername({
+    username: result.data.items[0].login
+  });
+  const page = response.data;
+  const isRedhat = page.company !== null && page.company.indexOf('Hat') != -1;
+  if (page.name !== user.name)
+    console.warn('!!', page.name, user.name, 'is this the same user?');
+  userTable.push({
+    username: user.name,
+    lookupName: page.name,
+    email: page.email,
+    isRedhat: isRedhat
+  });
+}
