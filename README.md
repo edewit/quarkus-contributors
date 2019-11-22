@@ -1,6 +1,7 @@
 ### Script to see who originated a extendsion
 
-And see if they are redhat or not, to pervent throttling creaet a personal token put that replace that with `<token>`
+And see if they are redhat or not.
+To pervent throttling creaet a personal token put in the environment vars TOKEN=`<token>`
 
 to build and run:
 
